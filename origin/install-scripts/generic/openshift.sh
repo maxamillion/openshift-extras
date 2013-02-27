@@ -327,7 +327,7 @@ install_broker_gems()
   gem install railties        -v $rails_version
   gem install actionmailer    -v $rails_version
   gem install actionpack      -v $rails_version
-  gem install actionmodel     -v $rails_version
+  gem install activemodel     -v $rails_version
   gem install activerecord    -v $rails_version
   gem install activeresource  -v $rails_version
   gem install activesupport   -v $rails_version
