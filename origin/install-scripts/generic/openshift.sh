@@ -1,6 +1,7 @@
+#!/bin/bash
 # This script configures a host system with OpenShift components. It may
-# be used either as a RHEL6 kickstart script, or the %post section may 
-# be extracted and run directly to install on top of an installed RHEL6
+# be used either as a Fedora18 kickstart script, or the %post section may 
+# be extracted and run directly to install on top of an installed Fedora18
 # image. When running the %post outside kickstart, a reboot is required
 # afterward.
 
@@ -59,7 +60,7 @@
 #   subscribing.
 
 # repos_base / CONF_REPOS_BASE
-#   Default: https://mirror.openshift.com/pub/origin-server/nightly/enterprise/<latest>
+#   Default: https://mirror.openshift.com/pub/origin-server/nightly/
 #   The base URL for the OpenShift repositories used for the "yum" 
 #   install method
 
@@ -225,55 +226,6 @@
 #    hosts, just keep the keys from the image).
 
 
-#Begin Kickstart Script
-install
-text
-skipx
-
-# NB: Be sure to change the password before running this script.
-rootpw  --iscrypted $6$QgevUVWY7.dTjKz6$jugejKU4YTngbFpfNlqrPsiE4sLJSj/ahcfqK8fE5lO0jxDhvdg59Qjk9Qn3vNPAUTWXOp9mchQDy6EV9.XBW1
-
-lang en_US.UTF-8
-keyboard us
-timezone --utc America/New_York
-
-services --enabled=ypbind,ntpd,network,logwatch
-network --onboot yes --device eth0
-firewall --service=ssh
-authconfig --enableshadow --passalgo=sha512
-selinux --enforcing
-
-bootloader --location=mbr --driveorder=vda --append=" rhgb crashkernel=auto quiet console=ttyS0"
-
-clearpart --all --initlabel
-firstboot --disable
-reboot
-
-part /boot --fstype=ext4 --size=500
-part pv.253002 --grow --size=1
-volgroup vg_vm1 --pesize=4096 pv.253002
-logvol / --fstype=ext4 --name=lv_root --vgname=vg_vm1 --grow --size=1024 --maxsize=51200
-logvol swap --name=lv_swap --vgname=vg_vm1 --grow --size=2016 --maxsize=4032
-
-%packages
-@core
-@server-policy
-ntp
-git
-
-%post --log=/root/anaconda-post.log
-
-# During a kickstart you can tail the log file showing %post execution
-# by using the following command:
-#    tailf /mnt/sysimage/root/anaconda-post.log
-
-# You can use sed to extract just the %post section:
-#    sed -e '0,/^%post/d;/^%end/,$d'
-# Be sure to reboot after installation if using the %post this way.
-
-# Log the command invocations (and not merely output) in order to make
-# the log more useful.
-set -x
 
 
 ########################################################################
@@ -322,94 +274,18 @@ EOF
   : # no-op so that this function definition is valid.
 }
 
-configure_client_tools_repo()
+configure_f18_nightly_repo()
 {
-  # Enable repo with the puddle for broker packages.
-  cat > /etc/yum.repos.d/openshift-client.repo <<YUM
-[openshift_client]
-name=OpenShift Client
-baseurl=${repos_base}/Client/x86_64/os/
+  # Enable repo with the nightly Fedora 18 builds
+  cat > /etc/yum.repos.d/openshift-origin-nightly.repo <<YUM
+[openshift_origin_nightly]
+name=OpenShift Origin Nightly
+baseurl=${repos_base}/fedora-18/latest/x86_64/
 enabled=1
 gpgcheck=0
 sslverify=false
 
 YUM
-}
-
-configure_broker_repo()
-{
-  # Enable repo with the puddle for broker packages.
-  cat > /etc/yum.repos.d/openshift-infrastructure.repo <<YUM
-[openshift_infrastructure]
-name=OpenShift Infrastructure
-baseurl=${repos_base}/Infrastructure/x86_64/os/
-enabled=1
-gpgcheck=0
-sslverify=false
-
-YUM
-}
-
-configure_node_repo()
-{
-  # Enable repo with the puddle for node packages.
-  cat > /etc/yum.repos.d/openshift-node.repo <<YUM
-[openshift_node]
-name=OpenShift Node
-baseurl=${repos_base}/Node/x86_64/os/
-enabled=1
-gpgcheck=0
-sslverify=false
-
-YUM
-}
-
-configure_jbosseap_cartridge_repo()
-{
-  # Enable repo with the puddle for the JBossEAP cartridge package.
-  cat > /etc/yum.repos.d/openshift-jboss.repo <<YUM
-[openshift_jbosseap]
-name=OpenShift JBossEAP
-baseurl=${repos_base}/JBoss_EAP6_Cartridge/x86_64/os/
-enabled=1
-gpgcheck=0
-sslverify=false
-
-YUM
-}
-
-configure_jbosseap_subscription()
-{
-  # The JBossEAP cartridge depends on Red Hat's JBoss packages, so you
-  # must subscribe to the appropriate channel here.
-
-  ## configure JBossEAP subscription
-  cat <<EOF > /etc/yum.repos.d/jbosseap.repo
-[jbosseap]
-name=jbosseap
-baseurl=http://${jboss_repo_base}/content/dist/rhel/server/6/6Server/x86_64/jbeap/6/os/
-enabled=1
-gpgcheck=0
-
-EOF
-  : # no-op so that this function definition is valid.
-}
-
-configure_jbossews_subscription()
-{
-  # The JBossEWS cartridge depends on Red Hat's JBoss packages, so you
-  # must subscribe to the appropriate channel here.
-
-  ## configure JBossEWS subscription
-  cat <<EOF > /etc/yum.repos.d/jbossews.repo
-[jbossews]
-name=jbossews
-baseurl=http://${jboss_repo_base}/content/dist/rhel/server/6/6Server/x86_64/jbews/1/os/
-enabled=1
-gpgcheck=0
-
-EOF
-  : # no-op so that this function definition is valid.
 }
 
 yum_install_or_exit()
@@ -417,7 +293,7 @@ yum_install_or_exit()
   yum install $*
   if [ $? -ne 0 ]
   then
-    echo "yum install failed; aborting installation. Please ensure you have configured the relevant repos/subscriptions."
+    echo "yum install failed; aborting installation. Please ensure you have configured the relevant repos"
     exit 1
   fi
 }
@@ -459,24 +335,29 @@ install_cartridges()
 {
   # Following are cartridge rpms that one may want to install here:
 
+  # "initalize" this so we can daisy-chain because kickstarts are picky
+  carts=""
+
+  # Scripts and hooks common to v1 carts
+  carts="$carts openshift-origin-cartridge-abstract"
+
+  # Script and hooks specific to jboss cart
+  carts="$carts openshift-origin-cartridge-abstract-jboss"
+
+  # Community cartridge for python 2.7 support
+  carts="$carts openshift-origin-cartridge-community-python-2.7"
+  
+  # Community cartridge for python 3.3 support
+  carts="$carts openshift-origin-cartridge-community-python-3.3"
+
   # Embedded cron support. This is required on node hosts.
-  carts="openshift-origin-cartridge-cron-1.4"
+  carts="$carts openshift-origin-cartridge-cron-1.4"
 
   # diy app.
   carts="$carts openshift-origin-cartridge-diy-0.1"
 
   # haproxy-1.4 support.
   carts="$carts openshift-origin-cartridge-haproxy-1.4"
-
-  # JBossEWS1.0 support.
-  # Note: Be sure to subscribe to the JBossEWS entitlements during the
-  # base install or in configure_jbossews_subscription.
-  #carts="$carts openshift-origin-cartridge-jbossews-1.0"
-
-  # JBossEAP6.0 support.
-  # Note: Be sure to subscribe to the JBossEAP entitlements during the
-  # base install or in configure_jbosseap_subscription.
-  #carts="$carts openshift-origin-cartridge-jbosseap-6.0"
 
   # Jenkins server for continuous integration.
   carts="$carts openshift-origin-cartridge-jenkins-1.4"
@@ -487,23 +368,23 @@ install_cartridges()
   # Embedded MySQL.
   carts="$carts openshift-origin-cartridge-mysql-5.1"
 
-  # mod_perl support.
-  carts="$carts openshift-origin-cartridge-perl-5.10"
+  # nodejs 0.6 support.
+  carts="$carts openshift-origin-cartridge-nodejs-0.6"
 
-  # PHP 5.3 support.
-  carts="$carts openshift-origin-cartridge-php-5.3"
+  # mod_perl support.
+  carts="$carts openshift-origin-cartridge-perl-5.16"
+
+  # PHP 5.4 support.
+  carts="$carts openshift-origin-cartridge-php-5.4"
+
+  # phpMyAdmin - web UI for MySQL administration
+  carts="$carts openshift-origin-cartridge-phpmyadmin-3.5"
 
   # Embedded PostgreSQL.
-  carts="$carts openshift-origin-cartridge-postgresql-8.4"
-
-  # Python 2.6 support.
-  carts="$carts openshift-origin-cartridge-python-2.6"
-
-  # Ruby Rack support running on Phusion Passenger (Ruby 1.8).
-  carts="$carts openshift-origin-cartridge-ruby-1.8"
+  carts="$carts openshift-origin-cartridge-postgresql-9.2"
 
   # Ruby Rack support running on Phusion Passenger (Ruby 1.9).
-  carts="$carts openshift-origin-cartridge-ruby-1.9-scl"
+  carts="$carts openshift-origin-cartridge-ruby-1.9"
 
   # When dependencies are missing, e.g. JBoss subscriptions,
   # still install as much as possible.
@@ -529,12 +410,7 @@ configure_selinux_policy_on_broker()
     echo boolean -m --on httpd_can_network_relay
 
     # Enable some passenger-related permissions.
-    #
-    # The name may change at some future point, at which point we will
-    # need to delete the httpd_run_stickshift line below and enable the
-    # httpd_run_openshift line.
-    echo boolean -m --on httpd_run_stickshift
-    #echo boolean -m --on httpd_run_openshift
+    echo boolean -m --on httpd_run_openshift
 
     # Allow the broker to communicate with the named service.
     echo boolean -m --on allow_ypbind
@@ -1700,9 +1576,8 @@ set_defaults()
 
   # Following are some settings used in subsequent steps.
 
-  # Where to find the OpenShift repositories; just the base part before
-  # splitting out into Infrastructure/Node/etc.
-  repos_base_default='https://mirror.openshift.com/pub/origin-server/nightly/enterprise/2012-11-15'
+  # Where to find the OpenShift repositories; 
+  repos_base_default='https://mirror.openshift.com/pub/origin-server/nightly/'
   repos_base="${CONF_REPOS_BASE:-${repos_base_default}}"
 
   # There a no defaults for these. Customers should be using 
@@ -1893,4 +1768,3 @@ node && update_openshift_facts_on_node
 echo "Installation and configuration is complete;"
 echo "please reboot to start all services properly."
 
-%end
