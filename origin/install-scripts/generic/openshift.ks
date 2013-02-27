@@ -357,13 +357,14 @@ install_broker_pkgs()
   pkgs="$pkgs rubygem-openshift-origin-dns-bind"
   pkgs="$pkgs rubygem-openshift-origin-dns-nsupdate"
   pkgs="$pkgs rubygem-openshift-origin-controller"
-  pkgs="$pkgs openshift-console"
+  pkgs="$pkgs openshift-origin-console"
 
   # These are needed to build gem native modules in the gem install section
   pkgs="$pkgs rubygems"
   pkgs="$pkgs ruby-devel"
   pkgs="$pkgs mongodb-devel"
   pkgs="$pkgs mysql-devel"
+  pkgs="$pkgs gcc make automake"
 
   yum_install_or_exit -y $pkgs
 }
