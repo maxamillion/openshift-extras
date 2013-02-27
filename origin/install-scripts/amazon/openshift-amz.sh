@@ -1575,7 +1575,7 @@ is_false "$CONF_NO_SSH_KEYS" && install_ssh_keys
 if is_false "$CONF_NO_REPOS"
 then
   configure_f18_nightly_repo
-  configure_f18_supplemental_repo()
+  configure_f18_supplemental_repo
 fi
 
 yum update -y
