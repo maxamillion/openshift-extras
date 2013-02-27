@@ -59,7 +59,7 @@
 #   subscribing.
 
 # repos_base / CONF_REPOS_BASE
-#   Default: https://mirror.openshift.com/pub/origin-server/nightly/
+#   Default: https://mirror.openshift.com/pub/origin-server/
 #   The base URL for the OpenShift repositories used for the "yum" 
 #   install method
 
@@ -159,11 +159,6 @@
 # configure_rhel_repo function below subscribes to RHEL or configures
 # RHEL yum repos.
 #
-# The JBoss cartridges similarly require packages from the JBoss
-# entitlements, so you must subscribe to the corresponding channels
-# during the base install or modify the configure_jbossews_subscription
-# or configure_jbosseap_subscription functions to do so.
-#
 # The OpenShift repository steps below refer to public beta yum
 # repositories. For a supported production product, comment these out
 # and use your OpenShift Enterprise subscription instead.
@@ -226,6 +221,9 @@
 
 
 #Begin Kickstart Script
+repo --name=fedora --mirrorlist=http://mirrors.fedoraproject.org/mirrorlist?repo=fedora-18&arch=x86_64
+repo --name=updates --mirrorlist=http://mirrors.fedoraproject.org/mirrorlist?repo=updates-released-f18&arch=x86_64
+
 install
 text
 skipx
@@ -303,30 +301,34 @@ KEYS
 }
 
 
-configure_rhel_repo()
-{
-  # In order for the %post section to succeed, it must have a way of 
-  # installing from RHEL. The post section cannot access the method that
-  # was used in the base install. So, you must subscribe to RHEL or
-  # configure RHEL repos here.
-
-  # configure RHEL subscription or repos here
-  : # no-op so that this function definition is valid.
-}
-
 configure_f18_nightly_repo()
 {
   # Enable repo with the nightly Fedora 18 builds
   cat > /etc/yum.repos.d/openshift-origin-nightly.repo <<YUM
 [openshift_origin_nightly]
 name=OpenShift Origin Nightly
-baseurl=${repos_base}/fedora-18/latest/x86_64/
+baseurl=${repos_base}/nightly/fedora-18/latest/x86_64/
 enabled=1
 gpgcheck=0
 sslverify=false
 
 YUM
 }
+
+configure_f18_supplemental_repo()
+{
+  # Enable repo with the packages needed to add on to Fedora 18
+  cat > /etc/yum.repos.d/openshift-origin-supplemental.repo <<YUM
+[openshift_origin_supplemental]
+name=OpenShift Origin Supplemental required packages
+baseurl=${repos_base}/fedora-18/x86_64/
+enabled=1
+gpgcheck=0
+sslverify=false
+
+YUM
+}
+
 
 yum_install_or_exit()
 {
@@ -347,22 +349,111 @@ install_rhc_pkg()
 # Install broker-specific packages.
 install_broker_pkgs()
 {
-  pkgs="openshift-origin-broker"
+  pkgs=""
+  pkgs="$pkgs openshift-origin-broker"
   pkgs="$pkgs openshift-origin-broker-util"
   pkgs="$pkgs rubygem-openshift-origin-msg-broker-mcollective"
   pkgs="$pkgs rubygem-openshift-origin-auth-remote-user"
   pkgs="$pkgs rubygem-openshift-origin-dns-bind"
+  pkgs="$pkgs rubygem-openshift-origin-dns-nsupdate"
+  pkgs="$pkgs rubygem-openshift-origin-controller"
   pkgs="$pkgs openshift-console"
+
+  # These are needed to build gem native modules in the gem install section
+  pkgs="$pkgs rubygems"
+  pkgs="$pkgs ruby-devel"
+  pkgs="$pkgs mongodb-devel"
+  pkgs="$pkgs mysql-devel"
 
   yum_install_or_exit -y $pkgs
 }
 
-# Install node-specific packages.
+# Install broker gems, this is needed because we need newer versions of 
+# gems than are available in the Fedora yum repositories
+install_broker_gems()
+{
+  # Install Rails components
+  rails_version="3.2.11"
+  gem install rails           -v $rails_version
+  gem install railties        -v $rails_version
+  gem install actionmailer    -v $rails_version
+  gem install actionpack      -v $rails_version
+  gem install actionmodel     -v $rails_version
+  gem install activerecord    -v $rails_version
+  gem install activeresource  -v $rails_version
+  gem install activesupport   -v $rails_version
+  
+  # Install other dependencies
+  ## NOTE: Almost all of these are in the Fedora repos properly packaged as
+  ##        rubygem-gem_name but we currently depend on different versions
+  ##        than what is offered in the Fedora repos, hope to change this in 
+  ##        the future. #FIXME
+  gem install arel -v 3.0.2
+  gem install bigdecimal -v 1.1.0
+  gem install bson -v 1.8.2
+  gem install bson_ext -v 1.8.2
+  gem install builder -v 3.0.4
+  gem install bundler -v 1.1.4
+  gem install cucumber -v 1.1.9
+  gem install diff-lcs -v 1.1.2
+  gem install dnsruby -v 1.53
+  gem install erubis -v 2.7.0
+  gem install fakefs -v 0.4.2
+  gem install gherkin -v 2.9.3
+  gem install hike -v 1.2.1
+  gem install i18n -v 0.6.1
+  gem install journey -v 1.0.4
+  gem install json -v 1.7.6
+  gem install mail -v 2.4.4
+  gem install metaclass -v 0.0.1
+  gem install mime-types -v 1.20.1
+  gem install minitest -v 3.2.0
+  gem install mocha -v 0.12.1
+  gem install mongo -v 1.8.2
+  gem install mongoid -v 3.0.21
+  gem install moped -v 1.3.2
+  gem install multi_json -v 1.5.0
+  gem install netrc -v 0.7.1
+  gem install open4 -v 1.3.0
+  gem install origin -v 1.0.11
+  gem install parseconfig -v 0.5.2
+  gem install polyglot -v 0.3.3
+  gem install rack -v 1.4.4
+  gem install rack-cache -v 1.2
+  gem install rack-ssl -v 1.3.3
+  gem install rack-test -v 0.6.2
+  gem install rake -v 0.9.2.2
+  gem install mysql #not available in Fedora at all currently
+  gem install regin -v 0.3.8
+  gem install rest-client -v 1.6.1
+  gem install simplecov -v 0.7.1
+  gem install simplecov-html -v 0.7.1
+  gem install sprockets -v 2.2.2
+  gem install state_machine -v 1.1.2
+  gem install stomp -v 1.2.2
+  gem install systemu -v 2.5.2
+  gem install term-ansicolor -v 1.0.7
+  gem install thor -v 0.17.0
+  gem install tilt -v 1.3.3
+  gem install treetop -v 1.4.12
+  gem install tzinfo -v 0.3.35
+  gem install xml-simple -v 1.1.2
+  gem install webmock -v 1.9.0
+
+}
+
+# Install node-specific packages and packages needed on the nodes.
 install_node_pkgs()
 {
-  pkgs="rubygem-openshift-origin-node rubygem-passenger-native"
-  pkgs="$pkgs openshift-origin-port-proxy"
+  pkgs=""
+  pkgs="$pkgs make"
+  pkgs="$pkgs rubygem-openshift-origin-node"
   pkgs="$pkgs openshift-origin-node-util"
+  pkgs="$pkgs pam_openshift"
+  pkgs="$pkgs openshift-origin-node-proxy"
+  pkgs="$pkgs openshift-origin-port-proxy"
+  pkgs="$pkgs openshift-origin-msg-node-mcollective"
+  pkgs="$pkgs rubygem-passenger-native"
   # We use semanage in this script, so we need to install
   # policycoreutils-python.
   pkgs="$pkgs policycoreutils-python"
@@ -449,8 +540,12 @@ configure_selinux_policy_on_broker()
     echo boolean -m --on httpd_can_network_connect
     echo boolean -m --on httpd_can_network_relay
 
+    # The name may change at some future point, at which point we will
+    # need to delete the httpd_run_stickshift line below and enable the
+    # httpd_run_openshift line.
     # Enable some passenger-related permissions.
-    echo boolean -m --on httpd_run_openshift
+    #echo boolean -m --on httpd_run_openshift
+    echo boolean -m --on httpd_run_stickshift
 
     # Allow the broker to communicate with the named service.
     echo boolean -m --on allow_ypbind
@@ -485,6 +580,7 @@ configure_selinux_policy_on_node()
     #echo boolean -m --on httpd_run_openshift
     echo boolean -m --on httpd_read_user_content
     echo boolean -m --on httpd_enable_homedirs
+    echo boolean -m --on httpd_execmem
 
     # Enable polyinstantiation for gear data.
     echo boolean -m --on allow_polyinstantiation
@@ -1617,13 +1713,8 @@ set_defaults()
   # Following are some settings used in subsequent steps.
 
   # Where to find the OpenShift repositories; 
-  repos_base_default='https://mirror.openshift.com/pub/origin-server/nightly/'
+  repos_base_default='https://mirror.openshift.com/pub/origin-server/'
   repos_base="${CONF_REPOS_BASE:-${repos_base_default}}"
-
-  # There a no defaults for these. Customers should be using 
-  # subscriptions via RHN. Internally we use private systems.
-  rhel_repo="$CONF_RHEL_REPO"
-  jboss_repo_base="$CONF_JBOSS_REPO_BASE"
 
   # The domain name for the OpenShift Enterprise installation.
   domain="${CONF_DOMAIN:-example.com}"
@@ -1737,16 +1828,7 @@ is_false "$CONF_NO_SSH_KEYS" && install_ssh_keys
 
 if is_false "$CONF_NO_REPOS"
 then
-  configure_rhel_repo
-  if activemq || broker || datastore
-  then
-    configure_broker_repo
-  fi
-  node && configure_node_repo
-  node && configure_jbosseap_cartridge_repo
-  node && configure_jbosseap_subscription
-  node && configure_jbossews_subscription
-  broker && configure_client_tools_repo
+  configure_f19_nightly_repo
 fi
 
 yum update -y
@@ -1772,6 +1854,7 @@ broker && configure_mcollective_for_activemq_on_broker
 node && configure_mcollective_for_activemq_on_node
 
 broker && install_broker_pkgs
+broker && install_broker_gems
 node && install_node_pkgs
 node && install_cartridges
 broker && install_rhc_pkg
