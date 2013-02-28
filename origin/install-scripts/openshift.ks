@@ -200,44 +200,42 @@
 
 
 #Begin Kickstart Script
-
 install
+# Firewall configuration
+firewall --enabled --http --ssh
+# Keyboard layouts
+keyboard 'us'# Use network installation
+url --url="http://mirrors.kernel.org/fedora/releases/18/Fedora/x86_64/os/"
+# Network information
+network  --bootproto=dhcp --device=eth0
+# Reboot after installation
+reboot# Root password
+rootpw --iscrypted $1$WhG5gHqg$E0OX7QuJ97DT9dapTzgiR1
+# System timezone
+timezone America/Chicago
+# System authorization information
+auth  --useshadow  --passalgo=sha512
+# Use text mode install
 text
+# System language
+lang en_US
+# SELinux configuration
+selinux --enforcing
+# Do not configure the X Window System
 skipx
 
-# NB: Be sure to change the password before running this script.
-rootpw  --iscrypted $6$156/07Kb$6PxSC.chLf6UIFkY7u4enINJmMw64JZ8ZvQjZdv7ldModUZlWfGBDLvIiLHtu.s3WkeTP6A/OqoBGkvP1Ibxv1
-
-lang en_US.UTF-8
-keyboard us
-timezone --utc America/Chicago
-
-services --enabled=ypbind,ntpd,network,logwatch
-network --onboot yes --device eth0
-firewall --service=ssh
-authconfig --enableshadow --passalgo=sha512
-selinux --enforcing
-
-bootloader --location=mbr --driveorder=vda --append=" rhgb crashkernel=auto quiet console=ttyS0"
-
+# System bootloader configuration
+bootloader --location=mbr
+# Clear the Master Boot Record
+zerombr
+# Partition clearing information
 clearpart --all --initlabel
-firstboot --disable
-reboot
-
-part /boot --fstype=ext4 --size=500
-part pv.253002 --grow --size=1
-volgroup vg_vm1 --pesize=4096 pv.253002
-logvol / --fstype=ext4 --name=lv_root --vgname=vg_vm1 --grow --size=1024 --maxsize=51200
-logvol swap --name=lv_swap --vgname=vg_vm1 --grow --size=2016 --maxsize=4032
-
-repo --name=fedora --mirrorlist=http://mirrors.fedoraproject.org/mirrorlist?repo=fedora-18&arch=x86_64
-repo --name=updates --mirrorlist=http://mirrors.fedoraproject.org/mirrorlist?repo=updates-released-f18&arch=x86_64
+# Disk partitioning information
+part / --fstype="ext4" --grow --size=1
 
 %packages
-@core
-@server-policy
-ntp
-git
+@standard
+
 
 %post --log=/root/anaconda-post.log
 
