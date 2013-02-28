@@ -209,7 +209,8 @@ url --url="http://mirrors.kernel.org/fedora/releases/18/Fedora/x86_64/os/"
 # Network information
 network  --bootproto=dhcp --device=eth0
 # Reboot after installation
-reboot# Root password
+reboot
+# Root password
 rootpw --iscrypted $1$WhG5gHqg$E0OX7QuJ97DT9dapTzgiR1
 # System timezone
 timezone America/Chicago
@@ -235,7 +236,7 @@ part / --fstype="ext4" --grow --size=1
 
 %packages
 @standard
-
+%end
 
 %post --log=/root/anaconda-post.log
 
