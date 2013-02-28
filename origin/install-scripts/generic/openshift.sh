@@ -47,18 +47,6 @@
 #     none - install source is already set up when the script executes
 #   Default: yum
 
-# sm_reg_name / CONF_SM_REG_NAME
-# sm_reg_pass / CONF_SM_REG_PASS
-# sm_reg_pool / CONF_SM_REG_POLL
-#   If using the "sm" install method, credentials for registering and
-#   subscribing.
-
-# rhn_reg_name / CONF_RHN_REG_NAME
-# rhn_reg_pass / CONF_RHN_REG_PASS
-# rhn_reg_subid / CONF_RHN_REG_SUBID
-#   If using the "sm" install method, credentials for registering and
-#   subscribing.
-
 # repos_base / CONF_REPOS_BASE
 #   Default: https://mirror.openshift.com/pub/origin-server/
 #   The base URL for the OpenShift repositories used for the "yum" 
@@ -153,21 +141,10 @@
 
 # IMPORTANT NOTES - DEPENDENCIES
 #
-# In order for the %post section to succeed, it must have a way of
-# installing from RHEL 6. The post section cannot access the method that
-# was used in the base install. So, you must modify this script, either
-# to subscribe to RHEL during the base install, or to ensure that the
-# configure_rhel_repo function below subscribes to RHEL or configures
-# RHEL yum repos.
-#
-# The OpenShift repository steps below refer to public beta yum
-# repositories. For a supported production product, comment these out
-# and use your OpenShift Enterprise subscription instead.
-#
-# DO NOT install with third-party (non-RHEL) repos enabled (e.g. EPEL).
-# You may install different package versions than OpenShift expects and
-# be in for a long troubleshooting session. Also avoid pre-installing
-# third-party software like Puppet for the same reason.
+# The OpenShift repository steps below refer to public OpenShift Origin
+# nightly development builds. It will likely work with more stable 
+# releases as well but the target is to be useful for those wanting
+# to play with the cutting edge code base.
 #
 # OTHER IMPORTANT NOTES
 #
@@ -175,6 +152,8 @@
 # authorized keys (or both) that are specified in the script, and/or set
 # up another user/group with sudo access so that you can access the
 # system after installation.
+#
+# Default root password: openshift!
 #
 # If you install a broker, the rhc client is installed as well, for
 # convenient local testing. Also, a test OpenShift user "demo" with
