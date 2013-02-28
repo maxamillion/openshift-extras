@@ -208,7 +208,7 @@ keyboard 'us'# Use network installation
 url --url="http://mirrors.kernel.org/fedora/releases/18/Fedora/x86_64/os/"
 # Network information
 network  --bootproto=dhcp --device=eth0
-# Reboot after installation
+# Reboot after install is complete
 reboot
 # Root password
 rootpw --iscrypted $1$WhG5gHqg$E0OX7QuJ97DT9dapTzgiR1
@@ -226,19 +226,20 @@ selinux --enforcing
 skipx
 
 # System bootloader configuration
-bootloader --location=mbr
+bootloader --location=mbr --driveorder=vda --append=" rhgb crashkernel=auto quiet console=ttyS0"
 # Clear the Master Boot Record
 zerombr
 # Partition clearing information
 clearpart --all --initlabel
 # Disk partitioning information
+part swap --fstype="swap" --size=1024
 part / --fstype="ext4" --grow --size=1
 
 %packages
 @standard
 %end
 
-%post --log=/root/anaconda-post.log
+%post --log=/root/anaconda-post.log 
 
 # During a kickstart you can tail the log file showing %post execution
 # by using the following command:
