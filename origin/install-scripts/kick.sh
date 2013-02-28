@@ -24,9 +24,12 @@ done
  
 set -x
  
-qemu-img create "$image_path" 15G -f raw && mkfs.ext4 -F "$image_path"
+qemu-img create "$image_path" 15G -f raw
+parted "$image_path" mklabel msdos
+parted --align optimal "$image_path" mkpart primary ext4 1M 15G
+mkfs.ext4 -F "$image_path"
  
 virt-install --name="$image_name" --ram=2048 --vcpus=2 --hvm \
   --disk "$image_path" --graphics spice -d --wait=-1 --autostart \
   --location http://mirrors.kernel.org/fedora/releases/18/Fedora/x86_64/os/ \
-  -x "$kickstart_args" --connect qemu:///system --network bridge=virbr0 
+  -x "$kickstart_args" --connect qemu:///system --network network=default

@@ -200,8 +200,6 @@
 
 
 #Begin Kickstart Script
-repo --name=fedora --mirrorlist=http://mirrors.fedoraproject.org/mirrorlist?repo=fedora-18&arch=x86_64
-repo --name=updates --mirrorlist=http://mirrors.fedoraproject.org/mirrorlist?repo=updates-released-f18&arch=x86_64
 
 install
 text
@@ -231,6 +229,9 @@ part pv.253002 --grow --size=1
 volgroup vg_vm1 --pesize=4096 pv.253002
 logvol / --fstype=ext4 --name=lv_root --vgname=vg_vm1 --grow --size=1024 --maxsize=51200
 logvol swap --name=lv_swap --vgname=vg_vm1 --grow --size=2016 --maxsize=4032
+
+repo --name=fedora --mirrorlist=http://mirrors.fedoraproject.org/mirrorlist?repo=fedora-18&arch=x86_64
+repo --name=updates --mirrorlist=http://mirrors.fedoraproject.org/mirrorlist?repo=updates-released-f18&arch=x86_64
 
 %packages
 @core
