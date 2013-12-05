@@ -448,7 +448,7 @@ host_order.each do |ssh_host|
       puts "Warning: There were errors during the deployment on host '#{host}'."
     end
     # Delete the local copy of the puppet script if it is still present
-    if File.exists?(hostfilepath)
+    unless File.exists?(hostfilepath) and config['Deployment'].has_key?('Hosts') and config['Deployment'].has_key?('DNS')
       File.unlink(hostfilepath)
     end
     # Bail out of the fork
